@@ -71,20 +71,39 @@ impl Png {
     }
   }
 
+  pub fn chunk_position(&self, chunk_type: &str) -> Option<usize> {
+    self.chunks.iter()
+      .position(|chunk| chunk.chunk_type().to_string() == chunk_type)
+  }
+
   pub fn append_chunk(&mut self, chunk: Chunk) {
     self.chunks.push(chunk);
   }
 
-  pub fn remove_chunk(&mut self, chunk_type: &str) -> Result<Chunk, std::io::Error> {
-    let chunk_pos = self.chunks
-      .iter()
-      .position(|chunk| chunk.chunk_type().to_string() == chunk_type);
+  pub fn insert_chunk(&mut self, pos: usize, chunk: Chunk) {
+    self.chunks.insert(pos, chunk);
+  }
 
-    if chunk_pos.is_none() {
-      return Err(std::io::Error::new(std::io::ErrorKind::Other, "no specificied chunk found"))
+  pub fn remove_chunk_at(&mut self, pos: usize) -> Result<Chunk, PngError> {
+    if self.chunks.is_empty() {
+      return Err(PngError::ChunksIsEmptyError)
     }
 
-    let removed = self.chunks.remove(chunk_pos.unwrap());
+    if pos > self.chunks.len() - 1 {
+      return Err(PngError::IndexOutOfBounds)
+    }
+
+    Ok(self.chunks.remove(pos))
+  }
+
+  pub fn remove_chunk(&mut self, chunk_type: &str) -> Result<Chunk, PngError> {
+    let pos = self.chunk_position(chunk_type);
+
+    if pos.is_none() {
+      return Err(PngError::ChunkNotFoundError)
+    }
+
+    let removed = self.chunks.remove(pos.unwrap());
 
     Ok(removed)
   }
