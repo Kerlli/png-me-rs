@@ -1,11 +1,24 @@
 pub mod chunk;
+pub mod color;
 pub mod color_type;
-mod error;
+pub mod filter_type;
 
+mod error;
+mod filter_method;
+
+use std::io::Read;
 use std::fmt;
 use std::fmt::Display;
+use chunk::image_header::ChunkImageHeader;
+use chunk::palette::ChunkPalette;
+use chunk::transparency::ChunkTransparency;
+use flate2::read::ZlibDecoder;
+
 use chunk::*;
+use color::*;
 use color_type::*;
+use filter_method::*;
+use filter_type::*;
 use error::*;
 
 pub struct Png {
@@ -17,7 +30,7 @@ impl TryFrom<&[u8]> for Png {
 
   fn try_from(bytes: &[u8]) -> Result<Self, <Self as TryFrom<&[u8]>>::Error> {
     // validate header
-    if bytes.iter().take(8).collect::<Vec<&u8>>() != Png::STANDARD_HEADER.iter().collect::<Vec<&u8>>() {
+    if bytes.iter().take(8).collect::<Vec<&u8>>() != Png::SIGNATURE.iter().collect::<Vec<&u8>>() {
       return Err(PngError::InvalidHeader)
     }
 
@@ -61,12 +74,21 @@ impl Display for Png {
   }
 }
 
+fn reverse_filter(scanline: &mut [u8], prev_scanline: &[u8], filter_type: FilterType) {
+  match filter_type {
+    FilterType::None => {},
+    FilterType::Sub => reverse_sub_filter(scanline),
+    FilterType::Up => reverse_up_filter(scanline, prev_scanline),
+    FilterType::Average => reverse_average_filter(scanline, prev_scanline),
+    FilterType::Paeth => reverse_paeth_filter(scanline, prev_scanline),
+  }
+}
+
 impl Png {
-  pub const STANDARD_HEADER: [u8; 8] = [137,80,78,71,13,10,26,10];
+  pub const SIGNATURE: [u8; 8] = [137,80,78,71,13,10,26,10];
 
   pub fn from_chunks(chunks: Vec<Chunk>) -> Self {
     Self {
-      // header: Self::STANDARD_HEADER,
       chunks,
     }
   }
@@ -108,12 +130,134 @@ impl Png {
     Ok(removed)
   }
 
-  pub fn header(&self) -> &[u8; 8] {
-    &Self::STANDARD_HEADER
-  }
-
   pub fn chunks(&self) -> &[Chunk] {
     self.chunks.as_slice()
+  }
+
+  /// get IHDR chunk info
+  pub fn header_chunk(&self) -> Option<&ChunkImageHeader> {
+    match self.chunk_by_type("IHDR") {
+      Some(chunk) => {
+        match chunk.chunk_data() {
+          ChunkData::ImageHeader(header) => Some(header),
+          _ => None,
+        }
+      },
+      _ => None
+    }
+  }
+
+  /// get tRNS chunk info
+  pub fn trns_chunk(&self) -> Option<&ChunkTransparency> {
+    match self.chunk_by_type("tRNS") {
+      Some(chunk) => {
+        match chunk.chunk_data() {
+          ChunkData::Transparency(trans) => Some(trans),
+          _ => None,
+        }
+      },
+      _ => None,
+    }
+  }
+
+  /// get PLTE chunk info
+  pub fn plte_chunk(&self) -> Option<&ChunkPalette> {
+    match self.chunk_by_type("PLTE") {
+      Some(chunk) => {
+        match chunk.chunk_data() {
+          ChunkData::Palette(p) => Some(p),
+          _ => None,
+        }
+      },
+      _ => None,
+    }
+  }
+
+  /// Compose IDAT chunks data into bytes
+  pub fn data(&self) -> Vec<u8> {
+    let data_chunks: Vec<&Chunk> = self.chunks.iter()
+      .filter(|chunk| chunk.chunk_type().to_string() == "IDAT")
+      .collect();
+
+    let data: Vec<u8> = data_chunks.iter().map(|chunk| chunk.data()).flatten().collect();
+
+    let mut decoder = ZlibDecoder::new(&data[..]);
+    let mut buffer: Vec<u8> = vec![];
+
+    decoder.read_to_end(&mut buffer).expect("Zlib Decoder read error");
+
+    let header_chunk = self.header_chunk().unwrap();
+    let width = header_chunk.width();
+    let color_channels = header_chunk.color_channels();
+    let bit_depth = header_chunk.bit_depth();
+
+    let bytes_per_pixel = u32::max(1, (color_channels * bit_depth / 8).into());
+
+    let bytes_per_row = bytes_per_pixel * width;
+
+    let scanline_bytes = bytes_per_row as usize + 1;
+    let scanline_count = buffer.len() / scanline_bytes;
+
+    for i in 0..scanline_count {
+      let start = i * scanline_bytes;
+      let end = start + scanline_bytes;
+      let mut scanline = buffer[start..end].to_vec();
+      let filter_type = FilterType::try_from(*(&scanline[0])).unwrap();
+
+      if i > 0 {
+        let prev_start = (i - 1) * scanline_bytes;
+        let prev_end = start;
+        let prev_scanline = &buffer[prev_start..prev_end];
+        reverse_filter(&mut scanline, prev_scanline, filter_type);
+      } else {
+        let prev_scanline = vec![0; scanline_bytes];
+        reverse_filter(&mut scanline, &prev_scanline[..], filter_type);
+      }
+
+      for (index, b) in scanline.iter().enumerate() {
+        buffer[index] = *b;
+      }
+    }
+
+    buffer
+  }
+
+  pub fn get_pixel(&self, x: u32, y: u32) -> Result<Color, PngError> {
+    // check bounds
+    let header_chunk = self.header_chunk().unwrap();
+    let width = header_chunk.width();
+    let height = header_chunk.height();
+
+    if x >= width || y >= height {
+      return Err(PngError::IndexOutOfBounds);
+    }
+    
+    let color_type = header_chunk.color_type();
+    let color_channels = header_chunk.color_channels();
+    let bit_depth = header_chunk.bit_depth();
+    let bytes_per_pixel = u32::max(1, (color_channels * bit_depth / 8).into());
+
+    let pixel_index: usize = (bytes_per_pixel * ((y * width) + x)) as usize;
+
+    let pixels_buffer: Vec<u8> = self.data();
+
+    match color_type {
+      ColorType::Grayscale => Ok(Color::Grayscale(pixels_buffer[pixel_index], pixels_buffer[pixel_index], pixels_buffer[pixel_index])),
+      ColorType::Rgb => Ok(Color::Rgb(pixels_buffer[pixel_index], pixels_buffer[pixel_index + 1], pixels_buffer[pixel_index + 2])),
+      ColorType::PaletteIndex => {
+        let palette_index = pixels_buffer[pixel_index];
+        
+        let palette_data = self.plte_chunk().unwrap();
+        let palette = palette_data.get(palette_index as usize).unwrap();
+        
+        let trns = self.trns_chunk().unwrap();
+        let transparency = trns.get_transparency(&color_type, palette_index as usize).unwrap_or(&255);
+
+        return Ok(Color::PaletteIndex(palette.red(), palette.green(), palette.blue(), *transparency))
+      },
+      ColorType::GrayscaleWithAlpha => Ok(Color::GrayscaleA(pixels_buffer[pixel_index], pixels_buffer[pixel_index], pixels_buffer[pixel_index], pixels_buffer[pixel_index + 1])),
+      ColorType::RgbWithAlpha => Ok(Color::RgbA(pixels_buffer[pixel_index], pixels_buffer[pixel_index + 1], pixels_buffer[pixel_index + 2], pixels_buffer[pixel_index + 3])),
+    }
   }
 
   pub fn chunk_by_type(&self, chunk_type: &str) -> Option<&Chunk> {
@@ -123,7 +267,7 @@ impl Png {
   }
 
   pub fn as_bytes(&self) -> Vec<u8> {
-    Self::STANDARD_HEADER.iter()
+    Self::SIGNATURE.iter()
       .map(|v| *v)
       .chain(
         self.chunks.iter()
@@ -179,7 +323,7 @@ mod tests {
             .flat_map(|chunk| chunk.as_bytes())
             .collect();
 
-        let bytes: Vec<u8> = Png::STANDARD_HEADER
+        let bytes: Vec<u8> = Png::SIGNATURE
             .iter()
             .chain(chunk_bytes.iter())
             .copied()
@@ -286,7 +430,7 @@ mod tests {
             .flat_map(|chunk| chunk.as_bytes())
             .collect();
 
-        let bytes: Vec<u8> = Png::STANDARD_HEADER
+        let bytes: Vec<u8> = Png::SIGNATURE
             .iter()
             .chain(chunk_bytes.iter())
             .copied()
