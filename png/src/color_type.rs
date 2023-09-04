@@ -1,6 +1,8 @@
 use std::fmt;
 use std::fmt::Display;
 
+use crate::PngError;
+
 /// Color Type
 #[derive(Clone, PartialEq)]
 pub enum ColorType {
@@ -34,7 +36,7 @@ impl Display for ColorType {
 }
 
 impl TryFrom<u8> for ColorType {
-  type Error = &'static str;
+  type Error = PngError;
 
   fn try_from(v: u8) -> Result<Self, <Self as TryFrom<u8>>::Error> {
     match v {
@@ -43,7 +45,7 @@ impl TryFrom<u8> for ColorType {
       3 => Ok(ColorType::PaletteIndex),
       4 => Ok(ColorType::GrayscaleWithAlpha),
       6 => Ok(ColorType::RgbWithAlpha),
-      _ => Err("Parse {v} to ColorType error: Unknown color type")
+      _ => Err(PngError::InvalidColorType)
     }
   }
 }
@@ -56,6 +58,18 @@ impl Into<u8> for ColorType {
       ColorType::PaletteIndex => 3,
       ColorType::GrayscaleWithAlpha => 4,
       ColorType::RgbWithAlpha => 6,
+    }
+  }
+}
+
+impl ColorType {
+  pub fn channels(&self) -> u8 {
+    match self {
+      Self::Grayscale => 1,
+      Self::Rgb => 3,
+      Self::PaletteIndex => 1,
+      Self::GrayscaleWithAlpha => 2,
+      Self::RgbWithAlpha => 4,
     }
   }
 }
