@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{BufReader, Read};
+use std::io::{BufReader, Read, Write};
 
 pub fn read_file_buffer(filepath: &str) -> Vec<u8> {
   let file = File::open(filepath).expect("Open file error");
@@ -11,7 +11,11 @@ pub fn read_file_buffer(filepath: &str) -> Vec<u8> {
 
   reader.read_to_end(&mut buffer).expect("Read buffer error");
 
-  // println!("Read buffer size: {}", size);
-
   buffer
+}
+
+pub fn write_buffer_to_file(buf: &[u8], filepath: &str) {
+  let mut file = File::create(filepath).expect("Create file error");
+
+  file.write_all(buf).expect("Write buf to file error");
 }
