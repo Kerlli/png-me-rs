@@ -2,6 +2,7 @@ use std::fmt;
 use std::fmt::Display;
 use std::str::FromStr;
 use crate::ChunkDataDecodeable;
+use crate::error::PngError;
 
 use super::ChunkType;
 use super::ColorType;
@@ -40,7 +41,7 @@ impl Display for ChunkImageHeader {
 }
 
 impl TryFrom<[u8; 13]> for ChunkImageHeader {
-  type Error = &'static str;
+  type Error = PngError;
 
   fn try_from(bytes: [u8; 13]) -> Result<Self, Self::Error> {
     let mut width: u32 = 0;
@@ -72,7 +73,7 @@ impl TryFrom<[u8; 13]> for ChunkImageHeader {
     };
 
     if !valid_bit_depth {
-      return Err("invalid bit_depth/color_type match")
+      return Err(PngError::InvalidBitDepth)
     }
 
     // compression method
@@ -80,7 +81,7 @@ impl TryFrom<[u8; 13]> for ChunkImageHeader {
     let compression_method = &bytes[10];
 
     if *compression_method != 0 {
-      return Err("invalid compression method value")
+      return Err(PngError::InvalidCompressionMehtod)
     }
 
     // filter method
@@ -88,7 +89,7 @@ impl TryFrom<[u8; 13]> for ChunkImageHeader {
     let filter_method = &bytes[11];
 
     if *filter_method != 0 {
-      return Err("invalid filter method value")
+      return Err(PngError::InvalidFilterMethod)
     }
 
     // interlace method
@@ -96,7 +97,7 @@ impl TryFrom<[u8; 13]> for ChunkImageHeader {
     let interlace_method = &bytes[12];
 
     if !(*interlace_method == 0 || *interlace_method == 1) {
-      return Err("invalid interlace method")
+      return Err(PngError::InvalidInterlaceMethod)
     }
 
     Ok(Self {
@@ -120,7 +121,7 @@ impl ChunkDataDecodeable for ChunkImageHeader {
       .chain(Some(self.bit_depth).iter())
       .chain(Some(self.color_type.clone().into()).iter())
       .chain(Some(self.compression_method).iter())
-      .chain(Some(self.filter_method).iter())
+      .chain(Some(self.filter_method.clone().into()).iter())
       .chain(Some(self.interlace_method).iter())
       .map(|&v| v)
       .collect()
@@ -140,8 +141,12 @@ impl ChunkImageHeader {
     self.bit_depth
   }
 
-  pub fn color_type(&self) -> u8 {
-    self.color_type.clone().into()
+  pub fn color_type(&self) -> ColorType {
+    self.color_type.clone()
+  }
+
+  pub fn color_channels(&self) -> u8 {
+    self.color_type.channels()
   }
 
   pub fn compression_method(&self) -> u8 {
@@ -149,7 +154,7 @@ impl ChunkImageHeader {
   }
 
   pub fn filter_method(&self) -> u8 {
-    self.filter_method
+    self.filter_method.clone().into()
   }
 
   pub fn interface_method(&self) -> u8 {
