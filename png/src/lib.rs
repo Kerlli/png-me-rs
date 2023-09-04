@@ -85,7 +85,7 @@ fn reverse_filter(scanline: &mut [u8], prev_scanline: &[u8], filter_type: Filter
 }
 
 impl Png {
-  pub const SIGNATURE: [u8; 8] = [137,80,78,71,13,10,26,10];
+  pub const SIGNATURE: [u8; 8] = [137, 80, 78, 71, 13, 10, 26, 10];
 
   pub fn from_chunks(chunks: Vec<Chunk>) -> Self {
     Self {
