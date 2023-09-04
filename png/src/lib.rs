@@ -39,7 +39,7 @@ impl TryFrom<&[u8]> for Png {
 
     let mut total = bytes.len() - Png::SIGNATURE.len();
 
-    let mut offset = CHUNK_TYPE_BYTE_LEN;
+    let mut offset = Png::SIGNATURE.len();
 
     while total > 0 {
       // chunk data length
