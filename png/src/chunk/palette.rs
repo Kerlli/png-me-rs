@@ -2,8 +2,23 @@ use std::fmt;
 use std::fmt::Display;
 use crate::ChunkDataDecodeable;
 
+/// Palette(Red, Green, Blue)
 #[derive(Copy, Clone)]
-struct Palette(u8, u8, u8);
+pub struct Palette(u8, u8, u8);
+
+impl Palette {
+  pub fn red(&self) -> u8 {
+    self.0
+  }
+
+  pub fn green(&self) -> u8 {
+    self.1
+  }
+
+  pub fn blue(&self) -> u8 {
+    self.2
+  }
+}
 
 impl Display for Palette {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
@@ -27,5 +42,11 @@ impl ChunkDataDecodeable for ChunkPalette {
       .map(|&p| vec![p.0, p.1, p.2])
       .flatten()
       .collect::<Vec<u8>>()
+  }
+}
+
+impl ChunkPalette {
+  pub fn get(&self, at: usize) -> Option<&Palette> {
+    self.palettes.get(at)
   }
 }
