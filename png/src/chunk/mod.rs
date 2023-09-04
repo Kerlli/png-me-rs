@@ -1,11 +1,11 @@
 mod chunk_type;
-mod image_header;
-mod palette;
+pub mod image_header;
+pub mod palette;
 mod gamma;
 mod chromaticities;
 mod srgb;
 mod icc_profile;
-mod transparency;
+pub mod transparency;
 
 pub use self::chunk_type::ChunkType;
 
@@ -20,13 +20,12 @@ use self::icc_profile::ChunkICCProfile;
 use std::fmt;
 use std::fmt::Display;
 use crc::{Crc,CRC_32_ISO_HDLC};
-use super::{ColorType, PngError};
+use super::{ColorType, FilterType, PngError};
 
 #[allow(dead_code)]
 const CRC_CKSUM: Crc<u32> = Crc::<u32>::new(&CRC_32_ISO_HDLC);
 
-#[allow(dead_code)]
-enum ChunkData {
+pub enum ChunkData {
   ImageHeader(ChunkImageHeader),
   Palette(ChunkPalette),
   ImageData(Vec<u8>),
@@ -204,6 +203,10 @@ impl Chunk {
 
   pub fn chunk_type(&self) -> &ChunkType {
     &self.chunk_type
+  }
+
+  pub fn chunk_data(&self) -> &ChunkData {
+    &self.data
   }
 
   pub fn data(&self) -> Vec<u8> {
