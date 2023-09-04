@@ -114,9 +114,7 @@ impl TryFrom<[u8; 13]> for ChunkImageHeader {
 
 impl ChunkDataDecodeable for ChunkImageHeader {
   fn as_bytes(&self) -> Vec<u8> {
-    ChunkType::from_str("IHDR").unwrap().bytes()
-      .iter()
-      .chain(self.width.to_be_bytes().iter())
+    self.width.to_be_bytes().iter()
       .chain(self.height.to_be_bytes().iter())
       .chain(Some(self.bit_depth).iter())
       .chain(Some(self.color_type.clone().into()).iter())
