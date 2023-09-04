@@ -32,8 +32,11 @@ impl TryFrom<[u8; 4]> for ChunkType {
   fn try_from(value: [u8; 4]) -> Result<Self, Self::Error> {
     for v in value.iter() {
       if !is_valid_word(*v) {
-        return Err(PngError::ChunkParseError)
+        return Err(PngError::ChunkTypeParseError)
       }
+      // if i == 2 && *v != 0 {
+      //   return Err(PngError::ChunkTypeParseError)
+      // }
     }
 
     Ok(Self(value))
@@ -50,10 +53,7 @@ fn is_valid_word(w: u8) -> bool {
 }
 
 fn bit_5_of(val: u8) -> u8 {
-  if val < 92 {
-    return 0
-  }
-  return 1
+  (val >> 5) & 1
 }
 
 impl FromStr for ChunkType {
