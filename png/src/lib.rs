@@ -37,29 +37,29 @@ impl TryFrom<&[u8]> for Png {
     // process chunks
     let mut chunks: Vec<Chunk> = vec![];
 
-    let mut total = bytes.len() - 8;
-    let mut skipped = 8;
-    let chunk_length = 4;
+    let mut total = bytes.len() - Png::SIGNATURE.len();
+
+    let mut offset = CHUNK_TYPE_BYTE_LEN;
 
     while total > 0 {
       // chunk data length
-      let mut chunk_length_bytes: [u8; 4] = [0,0,0,0];
-      for (i, b) in bytes.iter().skip(skipped).take(chunk_length).map(|&v| v).enumerate() {
+      let mut chunk_length_bytes: [u8; CHUNK_LENGTH_BYTE_LEN] = [0; CHUNK_LENGTH_BYTE_LEN];
+      for (i, b) in bytes.iter().skip(offset).take(CHUNK_LENGTH_BYTE_LEN).map(|&v| v).enumerate() {
         chunk_length_bytes[i] = b;
       }
       let chunk_data_length = u32::from_be_bytes(chunk_length_bytes);
 
-      let chunk_size = 4 + 4 + chunk_data_length + 4;
+      let chunk_size = CHUNK_LENGTH_BYTE_LEN + CHUNK_TYPE_BYTE_LEN + chunk_data_length as usize + CHUNK_CRC_BYTE_LEN;
 
-      let slice_start = skipped as usize;
-      let slice_end = skipped + (chunk_size as usize);
+      let slice_start = offset as usize;
+      let slice_end = offset + chunk_size;
 
       let chunk = Chunk::try_from(&bytes[slice_start..slice_end])?;
 
       chunks.push(chunk);
 
       total -= chunk_size as usize;
-      skipped += chunk_size as usize;
+      offset += chunk_size as usize;
     }
 
     Ok(Self {

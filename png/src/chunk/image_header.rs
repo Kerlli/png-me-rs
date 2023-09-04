@@ -1,11 +1,11 @@
 use std::fmt;
 use std::fmt::Display;
-use std::str::FromStr;
 use crate::ChunkDataDecodeable;
 use crate::error::PngError;
 
-use super::ChunkType;
 use super::ColorType;
+
+pub const IMAGE_HEADER_CHUNK_DATA_LEN: usize = 13;
 
 /// IHDR (Image header) chunk
 /// structure: <br/>
@@ -40,10 +40,10 @@ impl Display for ChunkImageHeader {
   }
 }
 
-impl TryFrom<[u8; 13]> for ChunkImageHeader {
+impl TryFrom<[u8; IMAGE_HEADER_CHUNK_DATA_LEN]> for ChunkImageHeader {
   type Error = PngError;
 
-  fn try_from(bytes: [u8; 13]) -> Result<Self, Self::Error> {
+  fn try_from(bytes: [u8; IMAGE_HEADER_CHUNK_DATA_LEN]) -> Result<Self, Self::Error> {
     let mut width: u32 = 0;
     let mut height: u32 = 0;
     // width
@@ -64,11 +64,11 @@ impl TryFrom<[u8; 13]> for ChunkImageHeader {
     let group = (*color_type_raw, *bit_depth);
 
     let valid_bit_depth = match group {
-      (0, 1|2|4|8|16) => true,
-      (2, 8|16) => true,
-      (3, 1|2|4|8) => true,
-      (4, 8|16) => true,
-      (6, 8|16) => true,
+      (0, 1 | 2 | 4 | 8 | 16) => true,
+      (2, 8 | 16) => true,
+      (3, 1 | 2 | 4 | 8) => true,
+      (4, 8 | 16) => true,
+      (6, 8 | 16) => true,
       _ => false,
     };
 

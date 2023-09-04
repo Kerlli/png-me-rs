@@ -9,7 +9,7 @@ pub mod transparency;
 
 pub use self::chunk_type::ChunkType;
 
-use self::image_header::ChunkImageHeader;
+use self::image_header::{ChunkImageHeader, IMAGE_HEADER_CHUNK_DATA_LEN};
 use self::palette::ChunkPalette;
 use self::transparency::ChunkTransparency;
 use self::gamma::ChunkGamma;
@@ -20,10 +20,13 @@ use self::icc_profile::ChunkICCProfile;
 use std::fmt;
 use std::fmt::Display;
 use crc::{Crc,CRC_32_ISO_HDLC};
-use super::{ColorType, FilterType, PngError};
+use super::{ColorType, PngError};
 
-#[allow(dead_code)]
 const CRC_CKSUM: Crc<u32> = Crc::<u32>::new(&CRC_32_ISO_HDLC);
+
+pub const CHUNK_LENGTH_BYTE_LEN: usize = 4;
+pub const CHUNK_TYPE_BYTE_LEN: usize = 4;
+pub const CHUNK_CRC_BYTE_LEN: usize = 4;
 
 pub enum ChunkData {
   ImageHeader(ChunkImageHeader),
@@ -93,7 +96,7 @@ pub struct Chunk {
 fn map_chunk_data(chunk_type: &ChunkType, data: Vec<u8>) -> ChunkData {
   match chunk_type.to_string().as_str() {
     "IHDR" => {
-      let mut bytes: [u8; 13] = [0; 13];
+      let mut bytes: [u8; IMAGE_HEADER_CHUNK_DATA_LEN] = [0; 13];
       for (i, b) in data.iter().enumerate() {
         bytes[i] = *b;
       } 
@@ -114,9 +117,11 @@ impl TryFrom<&[u8]> for Chunk {
   type Error = PngError;
 
   fn try_from(v: &[u8]) -> Result<Self, <Self as TryFrom<&[u8]>>::Error> {
-    let mut length_bytes: [u8; 4] = [0,0,0,0];
+    let len = v.len();
 
-    let iter_length = v.iter().take(4);
+    let mut length_bytes: [u8; CHUNK_LENGTH_BYTE_LEN] = [0; CHUNK_LENGTH_BYTE_LEN];
+
+    let iter_length = v.iter().take(CHUNK_LENGTH_BYTE_LEN);
 
     for (i, b) in iter_length.enumerate() {
       length_bytes[i] = *b;
@@ -124,25 +129,27 @@ impl TryFrom<&[u8]> for Chunk {
 
     let length: u32 = u32::from_be_bytes(length_bytes);
 
-    let mut chunk_bytes: [u8; 4] = [0,0,0,0];
+    let mut chunk_bytes: [u8; CHUNK_TYPE_BYTE_LEN] = [0; CHUNK_TYPE_BYTE_LEN];
 
-    for (i, b) in v.iter().skip(4).take(4).enumerate() {
+    for (i, b) in v.iter().skip(CHUNK_LENGTH_BYTE_LEN).take(CHUNK_TYPE_BYTE_LEN).enumerate() {
       chunk_bytes[i] = *b;
     }
 
     let chunk_type: ChunkType = ChunkType::try_from(chunk_bytes)?;
 
-    let rest = v.len() - 8;
+    let bytes_len_before_data = CHUNK_LENGTH_BYTE_LEN + CHUNK_TYPE_BYTE_LEN;
+    let except_data_len = bytes_len_before_data + CHUNK_CRC_BYTE_LEN;
+    let data_len = len - except_data_len;
 
-    let mut data: Vec<u8> = Vec::with_capacity(rest - 4);
+    let mut data: Vec<u8> = Vec::with_capacity(data_len);
 
-    for b in v.iter().skip(8).take(rest - 4) {
+    for b in v.iter().skip(bytes_len_before_data).take(data_len) {
       data.push(*b);
     }
 
-    let mut crc_bytes: [u8; 4] = [0,0,0,0];
+    let mut crc_bytes: [u8; CHUNK_CRC_BYTE_LEN] = [0; CHUNK_CRC_BYTE_LEN];
 
-    for (i, b) in v.iter().skip(v.len() - 4).take(4).enumerate() {
+    for (i, b) in v.iter().skip(len - CHUNK_CRC_BYTE_LEN).take(CHUNK_CRC_BYTE_LEN).enumerate() {
       crc_bytes[i] = *b;
     }
 
