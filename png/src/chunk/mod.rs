@@ -217,6 +217,24 @@ impl Chunk {
     self.crc
   }
 
+  pub fn set_data(&mut self, data: &[u8]) {
+    let new_len = data.len();
+    let chunk_type = self.chunk_type;
+    let new_data = map_chunk_data(&chunk_type, data.to_vec());
+
+    let new_crc = CRC_CKSUM.checksum(
+      chunk_type.bytes().iter()
+        .chain(data.iter())
+        .map(|v| *v)
+        .collect::<Vec<u8>>()
+        .as_slice()
+    );
+
+    self.length = new_len as u32;
+    self.data = new_data;
+    self.crc = new_crc;
+  }
+
   pub fn data_as_string(&self) -> Result<String, std::string::FromUtf8Error> {
     let s = String::from_utf8(self.data.as_bytes().iter().map(|v| *v).collect::<Vec<u8>>())?;
 

@@ -266,6 +266,12 @@ impl Png {
       .find(|chunk| chunk.chunk_type().to_string() == chunk_type)
   }
 
+  pub fn mut_chunk_by_type(&mut self, chunk_type: &str) -> Option<&mut Chunk> {
+    self.chunks
+      .iter_mut()
+      .find(|chunk| chunk.chunk_type().to_string() == chunk_type)
+  }
+
   pub fn as_bytes(&self) -> Vec<u8> {
     Self::SIGNATURE.iter()
       .map(|v| *v)
