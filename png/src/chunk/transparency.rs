@@ -1,4 +1,4 @@
-use crate::ChunkDataDecodeable;
+use crate::{ChunkDataDecodeable, color_type::ColorType};
 
 pub struct ChunkTransparency(Vec<u8>);
 
@@ -9,11 +9,10 @@ impl ChunkDataDecodeable for ChunkTransparency {
 }
 
 impl ChunkTransparency {
-  pub fn as_indexed_color_bytes(&self) -> Vec<u8> {
-    self.as_bytes()
-  }
-
-  pub fn as_grayscale_bytes(&self) -> Vec<u16> {
-    todo!()
+  pub fn get_transparency(&self, color_type: &ColorType, at: usize) -> Option<&u8> {
+    match color_type {
+      ColorType::PaletteIndex => self.0.get(at),
+      _ => None,
+    }
   }
 }
