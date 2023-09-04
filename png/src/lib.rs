@@ -136,7 +136,7 @@ impl Png {
 
   /// get IHDR chunk info
   pub fn header_chunk(&self) -> Option<&ChunkImageHeader> {
-    match self.chunk_by_type("IHDR") {
+    match self.get_chunk("IHDR") {
       Some(chunk) => {
         match chunk.chunk_data() {
           ChunkData::ImageHeader(header) => Some(header),
@@ -149,7 +149,7 @@ impl Png {
 
   /// get tRNS chunk info
   pub fn trns_chunk(&self) -> Option<&ChunkTransparency> {
-    match self.chunk_by_type("tRNS") {
+    match self.get_chunk("tRNS") {
       Some(chunk) => {
         match chunk.chunk_data() {
           ChunkData::Transparency(trans) => Some(trans),
@@ -162,7 +162,7 @@ impl Png {
 
   /// get PLTE chunk info
   pub fn plte_chunk(&self) -> Option<&ChunkPalette> {
-    match self.chunk_by_type("PLTE") {
+    match self.get_chunk("PLTE") {
       Some(chunk) => {
         match chunk.chunk_data() {
           ChunkData::Palette(p) => Some(p),
@@ -260,13 +260,13 @@ impl Png {
     }
   }
 
-  pub fn chunk_by_type(&self, chunk_type: &str) -> Option<&Chunk> {
+  pub fn get_chunk(&self, chunk_type: &str) -> Option<&Chunk> {
     self.chunks
       .iter()
       .find(|chunk| chunk.chunk_type().to_string() == chunk_type)
   }
 
-  pub fn mut_chunk_by_type(&mut self, chunk_type: &str) -> Option<&mut Chunk> {
+  pub fn get_chunk_mut(&mut self, chunk_type: &str) -> Option<&mut Chunk> {
     self.chunks
       .iter_mut()
       .find(|chunk| chunk.chunk_type().to_string() == chunk_type)
@@ -391,7 +391,7 @@ mod tests {
     #[test]
     fn test_chunk_by_type() {
         let png = testing_png();
-        let chunk = png.chunk_by_type("FrSt").unwrap();
+        let chunk = png.get_chunk("FrSt").unwrap();
         assert_eq!(&chunk.chunk_type().to_string(), "FrSt");
         assert_eq!(&chunk.data_as_string().unwrap(), "I am the first chunk");
 
@@ -401,7 +401,7 @@ mod tests {
     fn test_append_chunk() {
         let mut png = testing_png();
         png.append_chunk(chunk_from_strings("TeSt", "Message").unwrap());
-        let chunk = png.chunk_by_type("TeSt").unwrap();
+        let chunk = png.get_chunk("TeSt").unwrap();
         assert_eq!(&chunk.chunk_type().to_string(), "TeSt");
         assert_eq!(&chunk.data_as_string().unwrap(), "Message");
     }
@@ -411,7 +411,7 @@ mod tests {
         let mut png = testing_png();
         png.append_chunk(chunk_from_strings("TeSt", "Message").unwrap());
         png.remove_chunk("TeSt").unwrap();
-        let chunk = png.chunk_by_type("TeSt");
+        let chunk = png.get_chunk("TeSt");
         assert!(chunk.is_none());
     }
 

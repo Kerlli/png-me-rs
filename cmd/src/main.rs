@@ -32,7 +32,7 @@ fn main() {
       let mut png = Png::try_from(buffer.as_slice())
         .expect("Not a valid png format");
 
-      let chunk = png.mut_chunk_by_type(&chunk_name);
+      let chunk = png.get_chunk_mut(&chunk_name);
       
       match chunk {
         Some(c) => {
