@@ -16,6 +16,7 @@ pub enum PngError {
   ChunksIsEmptyError,
   ChunkTypeParseError,
   IndexOutOfBounds,
+  IoError(std::io::Error),
 }
 
 impl std::error::Error for PngError {}
@@ -36,6 +37,11 @@ impl Display for PngError {
       PngError::ChunksIsEmptyError => write!(f, "There're no chunks left"),
       PngError::ChunkTypeParseError => write!(f, "Chunk type parse error"),
       PngError::IndexOutOfBounds => write!(f, "Index out of bounds"),
+      PngError::IoError(err) => write!(f, "Io error: {}", err),
     }
   }
+}
+
+impl From<std::io::Error> for PngError {
+  fn from(err: std::io::Error) -> Self { Self::IoError(err) }
 }

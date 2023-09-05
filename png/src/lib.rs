@@ -6,9 +6,9 @@ pub mod filter_type;
 mod error;
 mod filter_method;
 
-use std::io::Read;
 use std::fmt;
 use std::fmt::Display;
+use std::io::Read;
 use chunk::image_header::ChunkImageHeader;
 use chunk::palette::ChunkPalette;
 use chunk::transparency::ChunkTransparency;
@@ -44,17 +44,12 @@ impl TryFrom<&[u8]> for Png {
     while total > 0 {
       // chunk data length
       let mut chunk_length_bytes: [u8; CHUNK_LENGTH_BYTE_LEN] = [0; CHUNK_LENGTH_BYTE_LEN];
-      for (i, b) in bytes.iter().skip(offset).take(CHUNK_LENGTH_BYTE_LEN).map(|&v| v).enumerate() {
-        chunk_length_bytes[i] = b;
-      }
+      chunk_length_bytes.copy_from_slice(&bytes[offset..offset+CHUNK_LENGTH_BYTE_LEN]);
       let chunk_data_length = u32::from_be_bytes(chunk_length_bytes);
 
       let chunk_size = CHUNK_LENGTH_BYTE_LEN + CHUNK_TYPE_BYTE_LEN + chunk_data_length as usize + CHUNK_CRC_BYTE_LEN;
 
-      let slice_start = offset as usize;
-      let slice_end = offset + chunk_size;
-
-      let chunk = Chunk::try_from(&bytes[slice_start..slice_end])?;
+      let chunk = Chunk::try_from(&bytes[offset..offset + chunk_size])?;
 
       chunks.push(chunk);
 
@@ -91,6 +86,34 @@ impl Png {
     Self {
       chunks,
     }
+  }
+
+  /// Try new from reader
+  pub fn from_reader<T: Read>(reader: &mut T) -> Result<Self, PngError> {
+    let mut buffer = vec![];
+
+    reader.read_to_end(&mut buffer)?;
+
+    let png = Self::try_from(&buffer[..])?;
+
+    Ok(png)
+  }
+
+  /// Try new from reader with buffer size
+  pub fn from_reader_buffer<T: Read>(reader: &mut T, buffer_size: usize) -> Result<Self, PngError> {
+    let mut buffer = vec![0; buffer_size];
+    
+    loop {
+      let bytes_read = reader.read(&mut buffer)?;
+      // Reach end
+      if bytes_read == 0 {
+        break;
+      }
+    }
+
+    let png = Self::try_from(&buffer[..])?;
+
+    Ok(png)
   }
 
   pub fn chunk_position(&self, chunk_type: &str) -> Option<usize> {
