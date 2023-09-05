@@ -1,6 +1,6 @@
 use std::fmt;
 use std::fmt::Display;
-use crate::ChunkDataDecodeable;
+use crate::ChunkRawBytes;
 use crate::error::PngError;
 
 use super::ColorType;
@@ -112,7 +112,7 @@ impl TryFrom<[u8; IMAGE_HEADER_CHUNK_DATA_LEN]> for ChunkImageHeader {
   }
 }
 
-impl ChunkDataDecodeable for ChunkImageHeader {
+impl ChunkRawBytes for ChunkImageHeader {
   fn as_bytes(&self) -> Vec<u8> {
     self.width.to_be_bytes().iter()
       .chain(self.height.to_be_bytes().iter())

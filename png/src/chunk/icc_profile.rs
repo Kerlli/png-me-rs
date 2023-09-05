@@ -1,6 +1,6 @@
 use std::fmt;
 use std::fmt::Display;
-use crate::ChunkDataDecodeable;
+use crate::ChunkRawBytes;
 
 pub struct ChunkICCProfile {
   /// 1 - 79 bytes
@@ -49,7 +49,7 @@ impl TryFrom<&Vec<u8>> for ChunkICCProfile {
   }
 }
 
-impl ChunkDataDecodeable for ChunkICCProfile {
+impl ChunkRawBytes for ChunkICCProfile {
   fn as_bytes(&self) -> Vec<u8> {
     self.profile_name.as_bytes().iter()
       .chain(Some(0).iter())

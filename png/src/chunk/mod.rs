@@ -64,7 +64,7 @@ impl Display for ChunkData {
   }
 }
 
-pub(super) trait ChunkDataDecodeable {
+pub(super) trait ChunkRawBytes {
   fn as_bytes(&self) -> Vec<u8>;
 }
 

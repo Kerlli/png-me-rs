@@ -1,6 +1,6 @@
 use std::fmt;
 use std::fmt::Display;
-use crate::ChunkDataDecodeable;
+use crate::ChunkRawBytes;
 
 pub struct ChunkChromaticities {
   white_point_x: u32,
@@ -30,7 +30,7 @@ impl Display for ChunkChromaticities {
   }
 }
 
-impl ChunkDataDecodeable for ChunkChromaticities {
+impl ChunkRawBytes for ChunkChromaticities {
   fn as_bytes(&self) -> Vec<u8> {
     self.white_point_x.to_be_bytes().iter()
       .chain(self.white_point_y.to_be_bytes().iter())

@@ -1,6 +1,6 @@
 use std::fmt;
 use std::fmt::Display;
-use crate::ChunkDataDecodeable;
+use crate::ChunkRawBytes;
 
 /// Palette(Red, Green, Blue)
 #[derive(Copy, Clone)]
@@ -36,7 +36,7 @@ impl Display for ChunkPalette {
   }
 }
 
-impl ChunkDataDecodeable for ChunkPalette {
+impl ChunkRawBytes for ChunkPalette {
   fn as_bytes(&self) -> Vec<u8> {
     self.palettes.iter()
       .map(|&p| vec![p.0, p.1, p.2])

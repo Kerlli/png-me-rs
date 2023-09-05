@@ -1,8 +1,8 @@
-use crate::{ChunkDataDecodeable, color_type::ColorType};
+use crate::{ChunkRawBytes, color_type::ColorType};
 
 pub struct ChunkTransparency(Vec<u8>);
 
-impl ChunkDataDecodeable for ChunkTransparency {
+impl ChunkRawBytes for ChunkTransparency {
   fn as_bytes(&self) -> Vec<u8> {
     self.0.to_vec()
   }

@@ -1,6 +1,6 @@
 use std::fmt;
 use std::fmt::Display;
-use crate::ChunkDataDecodeable;
+use crate::ChunkRawBytes;
 
 /// 0: Perceptual
 /// 1: Relative colorimetric
@@ -20,7 +20,7 @@ impl Display for ChunkSRGB {
   }
 }
 
-impl ChunkDataDecodeable for ChunkSRGB {
+impl ChunkRawBytes for ChunkSRGB {
   fn as_bytes(&self) -> Vec<u8> {
     vec![self.0]
   }

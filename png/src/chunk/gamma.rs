@@ -1,6 +1,6 @@
 use std::fmt;
 use std::fmt::Display;
-use crate::ChunkDataDecodeable;
+use crate::ChunkRawBytes;
 
 pub struct ChunkGamma(u32);
 
@@ -10,7 +10,7 @@ impl Display for ChunkGamma {
   }
 }
 
-impl ChunkDataDecodeable for ChunkGamma {
+impl ChunkRawBytes for ChunkGamma {
   fn as_bytes(&self) -> Vec<u8> {
     self.0.to_be_bytes().iter().map(|&v| v).collect()
   }
