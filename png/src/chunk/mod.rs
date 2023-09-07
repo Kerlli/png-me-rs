@@ -5,17 +5,19 @@ mod gamma;
 mod chromaticities;
 mod srgb;
 mod icc_profile;
+mod textual;
 pub mod transparency;
 
 pub use self::chunk_type::ChunkType;
 
-use self::image_header::{ChunkImageHeader, IMAGE_HEADER_CHUNK_DATA_LEN};
-use self::palette::ChunkPalette;
-use self::transparency::ChunkTransparency;
-use self::gamma::ChunkGamma;
 use self::chromaticities::ChunkChromaticities;
-use self::srgb::ChunkSRGB;
 use self::icc_profile::ChunkICCProfile;
+use self::image_header::{ChunkImageHeader, IMAGE_HEADER_CHUNK_DATA_LEN};
+use self::gamma::ChunkGamma;
+use self::palette::ChunkPalette;
+use self::srgb::ChunkSRGB;
+use self::textual::*;
+use self::transparency::ChunkTransparency;
 
 use std::fmt;
 use std::fmt::Display;
@@ -38,6 +40,9 @@ pub enum ChunkData {
   Chromaticities(ChunkChromaticities),
   SRgb(ChunkSRGB),
   ICCProfile(ChunkICCProfile),
+  Textual(ChunkTextual),
+  TextualCompressed(ChunkTextualCompressed),
+  TextualInternational(ChunkTextualInternational),
   Other(Vec<u8>),
 }
 
@@ -52,6 +57,9 @@ impl Display for ChunkData {
       ChunkData::Chromaticities(ch) => write!(f, "Chromaticties: {}", ch.to_string()),
       ChunkData::SRgb(srgb) => write!(f, "sRGB rendering intent: {}", srgb.to_string()),
       ChunkData::ICCProfile(profile) => write!(f, "ICC profile: {}", profile.to_string()),
+      ChunkData::Textual(t) => write!(f, "Textual: {}", t.to_string()),
+      ChunkData::TextualCompressed(tc) => write!(f, "Textual compressed: {}", tc.to_string()),
+      ChunkData::TextualInternational(ti) => write!(f, "Textual international: {}", ti.to_string()),
       ChunkData::Other(data) => {
         let s = String::from_utf8(data.to_vec());
         match s {
@@ -80,6 +88,9 @@ impl ChunkData {
       ChunkData::Chromaticities(ch) => ch.as_bytes(),
       ChunkData::SRgb(srgb) => srgb.as_bytes(),
       ChunkData::ICCProfile(icc) => icc.as_bytes(),
+      ChunkData::Textual(t) => t.as_bytes(),
+      ChunkData::TextualCompressed(tc) => tc.as_bytes(),
+      ChunkData::TextualInternational(ti) => ti.as_bytes(),
       ChunkData::Other(data) => data.to_vec(),
     }
   }
@@ -109,6 +120,12 @@ fn map_chunk_data(chunk_type: &ChunkType, data: Vec<u8>) -> ChunkData {
       ChunkData::ICCProfile(icc_profile)
     },
     "IEND" => ChunkData::ImageEnd,
+    "tEXt" => {
+      let text = ChunkTextual::try_from(&data[..]).unwrap();
+      ChunkData::Textual(text)
+    },
+    // todo: chunk compressed
+    // todo: chunk international
     _ => ChunkData::Other(data),
   }
 }

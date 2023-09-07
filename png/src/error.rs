@@ -17,6 +17,7 @@ pub enum PngError {
   ChunkTypeParseError,
   IndexOutOfBounds,
   IoError(std::io::Error),
+  StringFromUtf8Error(std::string::FromUtf8Error),
 }
 
 impl std::error::Error for PngError {}
@@ -38,10 +39,15 @@ impl Display for PngError {
       PngError::ChunkTypeParseError => write!(f, "Chunk type parse error"),
       PngError::IndexOutOfBounds => write!(f, "Index out of bounds"),
       PngError::IoError(err) => write!(f, "Io error: {}", err),
+      PngError::StringFromUtf8Error(err) => write!(f, "Convert to utf-8 string error: {}", err)
     }
   }
 }
 
 impl From<std::io::Error> for PngError {
   fn from(err: std::io::Error) -> Self { Self::IoError(err) }
+}
+
+impl From<std::string::FromUtf8Error> for PngError {
+  fn from(err: std::string::FromUtf8Error) -> Self { Self::StringFromUtf8Error(err) }
 }
