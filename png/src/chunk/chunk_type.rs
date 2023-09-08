@@ -19,7 +19,7 @@ pub struct ChunkType(u8, u8, u8, u8);
 impl std::fmt::Display for ChunkType {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
     let s: String = (*self).into();
-    write!(f, "Chunk Type: {}", s)
+    write!(f, "{}", s)
   }
 }
 
@@ -83,11 +83,7 @@ impl ChunkType {
   }
 
   pub fn is_valid(&self) -> bool {
-    if bit_5_of(self.2) != 0 {
-      return false
-    }
-
-    true
+    bit_5_of(self.2) == 0
   }
 
   pub fn is_critical(&self) -> bool {
