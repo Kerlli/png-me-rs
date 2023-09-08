@@ -14,7 +14,7 @@ pub enum PngError {
   ChunkNotFoundError,
   ChunkParseError,
   ChunksIsEmptyError,
-  ChunkTypeParseError,
+  ChunkTypeParseError(String),
   IndexOutOfBounds,
   IoError(std::io::Error),
   StringFromUtf8Error(std::string::FromUtf8Error),
@@ -36,7 +36,7 @@ impl Display for PngError {
       PngError::ChunkNotFoundError => write!(f, "Chunk not found"),
       PngError::ChunkParseError => write!(f, "Chunk parse error"),
       PngError::ChunksIsEmptyError => write!(f, "There're no chunks left"),
-      PngError::ChunkTypeParseError => write!(f, "Chunk type parse error"),
+      PngError::ChunkTypeParseError(err) => write!(f, "Chunk type parse error: {}", err),
       PngError::IndexOutOfBounds => write!(f, "Index out of bounds"),
       PngError::IoError(err) => write!(f, "Io error: {}", err),
       PngError::StringFromUtf8Error(err) => write!(f, "Convert to utf-8 string error: {}", err)
